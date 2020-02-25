@@ -12,22 +12,22 @@ def main():
     """ Scrape data (artists and songs lyrics) to data/external folder
     """
     logger = logging.getLogger(__name__)
-    logger.info('scrap artists names')
+    logger.info('scrape artists names')
     artist_file = open("artists.txt", "w")
-    artists_list = scrap_artists()
+    artists_list = scrape_artists()
     for artist in artists_list:
         artist_file.write(artist + "\n")
     artist_file.close()
 
-    logger.info('scrap songs lyrics')
+    logger.info('scrape songs lyrics')
     lyrics_file = open("lyrics.xt", "w")
-    lyrics_dict = scrap_songs_lyrics()
+    lyrics_dict = scrape_songs_lyrics()
     for song_info, lyrics in lyrics_dict.items():
         lyrics_file.write(song_info[0] + " |" + song_info[1] + "|" + lyrics + "|| \n")
 
 
-def scrap_artists():
-    """ Scrap Artists Names
+def scrape_artists():
+    """ Scrape Artists Names
     """
     resp = artists_google_query()
     if resp.status_code == 200:
@@ -54,8 +54,8 @@ def parse_artists(html_content):
     return results
 
 
-def scrap_songs_lyrics():
-    """ Scrap Songs Lyrics
+def scrape_songs_lyrics():
+    """ Scrape Songs Lyrics
     """
     return {("Artist 1", "Song 1"): "Blabla"}
 
