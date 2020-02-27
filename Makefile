@@ -27,7 +27,7 @@ requirements: test_environment
 
 
 scrape: requirements
-    $(PYTHON_INTERPRETER) src/data/scrap_dataset.py
+	$(PYTHON_INTERPRETER) src/data/scrape_dataset.py
 
 ## Make Dataset
 data: requirements
