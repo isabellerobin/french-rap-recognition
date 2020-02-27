@@ -6,27 +6,30 @@ from dotenv import find_dotenv, load_dotenv
 import requests
 from bs4 import BeautifulSoup
 from requests import Response
+from requests.adapters import HTTPAdapter
 from typing import List, Dict, Tuple, Optional
 import urllib
+import time
+
+from urllib3 import Retry
+
+logger = logging.getLogger(__name__)
 
 
 @click.command()
 def main():
     """ Scrape data (artists and songs lyrics) to data/external folder
     """
-    logger = logging.getLogger(__name__)
     logger.info('scrape artists names')
-    artist_file = open("artists.txt", "w")
+    artist_file = open("data/external/artists.txt", "w")
     artists_list = scrape_artists()
     for artist in artists_list:
         artist_file.write(artist + "\n")
     artist_file.close()
 
     logger.info('scrape songs lyrics')
-    lyrics_file = open("lyrics.xt", "w")
-    lyrics_dict = scrape_artists_songs()
-    for song_info, lyrics in lyrics_dict.items():
-        lyrics_file.write(song_info[0] + " |" + song_info[1] + "|" + lyrics + "|| \n")
+    lyrics_file = open("data/external/lyrics.txt", "a")
+    scrape_artists_songs(artists_list, lyrics_file)
 
 
 def scrape_artists():
@@ -55,24 +58,44 @@ def parse_artists(html_content: Response) -> List[str]:
     return results
 
 
-def scrape_artists_songs(artists: List[str]) -> Dict[Tuple[str], str]:
+def scrape_artists_songs(artists: List[str], lyrics_file):
     """ Scrape Songs Lyrics
     """
-    songs_map = {}
     for artist in artists:
         resp = artist_query(artist)
         artist_url = get_artist_page(resp.content)
         if artist_url:
+            logger.debug(f"Parsing artist {artist} songs")
             discography_resp = get_url_content(artist_url)
             soup = BeautifulSoup(discography_resp.content, "html.parser")
             albums = soup.find_all(lambda tag: tag.name == 'table')
             for album in albums:
+                time.sleep(1)
+                logger.debug(f"Parsing album {album} from artist {artist}")
                 rows = album.find_all(lambda tag: tag.name == 'tr')
                 song_suffix_list = [anchor["href"] for row in rows for anchor in row.find_all("a")]
-                for song in song_suffix_list:
-                    lyrics_url = "https://www.lyrics.com" + song
-                    songs_map.put((artist, extract_song_title(song)), scrape_lyrics(lyrics_url))
-    return songs_map
+                for song_suffix in song_suffix_list:
+                    try:
+                        time.sleep(2)
+                        scrape_song(artist, song_suffix, lyrics_file)
+                    except Exception:
+                        logger.error(f"Could not parse lyrics from song {extract_song_title(song_suffix)}")
+
+
+def scrape_song(artist: str, song_suffix: str, lyrics_file):
+    """
+    Scrape lyrics thanks to its url suffix and write them in the lyrics file
+
+    :param lyrics_file: file where lyrics should be written
+    :param artist: artist who authored the song
+    :param song_suffix: song lyrics url suffix
+    :return: updated songs lyrics dict
+    """
+    song_title = extract_song_title(song_suffix)
+    logger.debug(f"Parsing song {song_title}")
+    lyrics_url = "https://www.lyrics.com" + song_suffix
+    lyrics = scrape_lyrics(lyrics_url)
+    lyrics_file.write(artist + " |" + song_title + "|" + lyrics + "|| \n")
 
 
 def scrape_lyrics(url: str) -> str:
@@ -101,6 +124,7 @@ def clean(raw_lyrics) -> str:
 def get_artist_page(resp: Response) -> Optional[str]:
     soup = BeautifulSoup(resp, "html.parser")
     table = soup.find(lambda tag: tag.name == 'table')
+    #TODO: Add exception handling to catch error if artist does not exist
     rows = table.find_all(lambda tag: tag.name == 'tr')
     try:
         suffix = rows[0].find_all('a')[0]["href"]
@@ -110,22 +134,47 @@ def get_artist_page(resp: Response) -> Optional[str]:
         return None
 
 
-
 def artist_query(artist: str) -> Response:
     query = artist.replace(" ", "%20")
     url = f"https://www.lyrics.com/lyrics/{query}"
     return get_url_content(url)
 
 
-def get_url_content(url: str) -> Response:
-    USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:65.0) Gecko/20100101 Firefox/65.0"
+def get_url_content(url: str) -> Optional[Response]:
+    USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36"
     headers = {"user-agent": USER_AGENT}
-    return requests.get(url, headers=headers)
+    try:
+        response = requests_retry_session().get(url, headers=headers)
+    except Exception as err:
+        logger.error(f"Attempt to connect to {url} failed", exc_info=True)
+        return None
+    else:
+        logger.debug(f"Successful attempt to connect to {url}")
+        return response
+
+
+def requests_retry_session(
+        retries=3,
+        backoff_factor=0.3,
+        status_forcelist=(500, 502, 504),
+        session=None):
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
 
 
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
+    logging.basicConfig(level=logging.DEBUG, format=log_fmt)
 
     # not used in this stub but often useful for finding various files
     project_dir = Path(__file__).resolve().parents[2]
