@@ -72,12 +72,12 @@ def scrape_artists_songs(artists: List[str], lyrics_file):
         resp = artist_query(artist)
         artist_url = get_artist_page(resp.content)
         if artist_url:
-            logger.debug(f"Parsing artist {artist} songs")
+            logger.info(f"Parsing artist {artist} songs")
             discography_resp = get_url_content(artist_url)
             soup = BeautifulSoup(discography_resp.content, "html.parser")
             albums = soup.find_all(lambda tag: tag.name == 'table')
             for album in albums:
-                logger.debug(f"Parsing album {album} from artist {artist}")
+                logger.info(f"Parsing new album from artist {artist}")
                 rows = album.find_all(lambda tag: tag.name == 'tr')
                 song_suffix_list = [anchor["href"] for row in rows for anchor in row.find_all("a")]
                 for song_suffix in song_suffix_list:
@@ -85,6 +85,8 @@ def scrape_artists_songs(artists: List[str], lyrics_file):
                         scrape_song(artist, song_suffix, lyrics_file)
                     except Exception:
                         logger.error(f"Could not parse lyrics from song {extract_song_title(song_suffix)}")
+        else:
+            logger.error(f"Could not find {artist} lyrics page")
 
 
 def scrape_song(artist: str, song_suffix: str, lyrics_file):
@@ -97,7 +99,7 @@ def scrape_song(artist: str, song_suffix: str, lyrics_file):
     :return: updated songs lyrics dict
     """
     song_title = extract_song_title(song_suffix)
-    logger.debug(f"Parsing song {song_title}")
+    logger.info(f"Parsing song {song_title}")
     lyrics_url = "https://www.lyrics.com" + song_suffix
     lyrics = scrape_lyrics(lyrics_url)
     lyrics_file.write(artist + " |" + song_title + "|" + lyrics + "|| \n")
