@@ -1,31 +1,38 @@
 # -*- coding: utf-8 -*-
-import click
 import logging
+import urllib
 from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
+
+import click
 import requests
 from bs4 import BeautifulSoup
+from dotenv import find_dotenv, load_dotenv
 from requests import Response
 from requests.adapters import HTTPAdapter
-from typing import List, Dict, Tuple, Optional
-import urllib
-import time
-
+from typing import List, Optional
 from urllib3 import Retry
 
 logger = logging.getLogger(__name__)
 
 
 @click.command()
-def main():
+@click.argument('artist_filepath', type=click.Path())
+def main(artist_filepath=None):
     """ Scrape data (artists and songs lyrics) to data/external folder
     """
-    logger.info('scrape artists names')
-    artist_file = open("data/external/artists.txt", "w")
-    artists_list = scrape_artists()
-    for artist in artists_list:
-        artist_file.write(artist + "\n")
-    artist_file.close()
+    if artist_filepath:
+        logger.info("read artists names")
+        artist_file = open(artist_filepath, "r")
+        artists_list = []
+        for line in artist_file:
+            artists_list.append(line)
+    else:
+        logger.info('scrape artists names')
+        artist_file = open("data/external/artists.txt", "w")
+        artists_list = scrape_artists()
+        for artist in artists_list:
+            artist_file.write(artist + "\n")
+        artist_file.close()
 
     logger.info('scrape songs lyrics')
     lyrics_file = open("data/external/lyrics.txt", "a")
