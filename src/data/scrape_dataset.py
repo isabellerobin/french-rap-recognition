@@ -70,13 +70,11 @@ def scrape_artists_songs(artists: List[str], lyrics_file):
             soup = BeautifulSoup(discography_resp.content, "html.parser")
             albums = soup.find_all(lambda tag: tag.name == 'table')
             for album in albums:
-                time.sleep(1)
                 logger.debug(f"Parsing album {album} from artist {artist}")
                 rows = album.find_all(lambda tag: tag.name == 'tr')
                 song_suffix_list = [anchor["href"] for row in rows for anchor in row.find_all("a")]
                 for song_suffix in song_suffix_list:
                     try:
-                        time.sleep(2)
                         scrape_song(artist, song_suffix, lyrics_file)
                     except Exception:
                         logger.error(f"Could not parse lyrics from song {extract_song_title(song_suffix)}")
