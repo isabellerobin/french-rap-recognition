@@ -121,14 +121,13 @@ def clean(raw_lyrics) -> str:
 
 def get_artist_page(resp: Response) -> Optional[str]:
     soup = BeautifulSoup(resp, "html.parser")
-    table = soup.find(lambda tag: tag.name == 'table')
-    #TODO: Add exception handling to catch error if artist does not exist
-    rows = table.find_all(lambda tag: tag.name == 'tr')
     try:
+        table = soup.find(lambda tag: tag.name == 'table')
+        rows = table.find_all(lambda tag: tag.name == 'tr')
         suffix = rows[0].find_all('a')[0]["href"]
         url = "https://www.lyrics.com/" + suffix
         return url
-    except IndexError:
+    except Exception:
         return None
 
 
