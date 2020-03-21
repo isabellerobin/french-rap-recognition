@@ -35,7 +35,7 @@ def main(artist_filepath=None):
         artist_file.close()
 
     logger.info('scrape songs lyrics')
-    lyrics_file = open("data/external/lyrics.txt", "a")
+    lyrics_file = open("data/external/lyrics.tsv", "a")
     scrape_artists_songs(artists_list, lyrics_file)
 
 
@@ -102,7 +102,8 @@ def scrape_song(artist: str, song_suffix: str, lyrics_file):
     logger.info(f"Parsing song {song_title}")
     lyrics_url = "https://www.lyrics.com" + song_suffix
     lyrics = scrape_lyrics(lyrics_url)
-    lyrics_file.write(artist + " |" + song_title + "|" + lyrics + "|| \n")
+    clean_lyrics = lyrics.replace("\"", "").strip('\n')
+    lyrics_file.write(artist + "|" + song_title + "|\"" + clean_lyrics + "\"\n")
 
 
 def scrape_lyrics(url: str) -> str:
