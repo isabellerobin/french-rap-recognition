@@ -12,3 +12,7 @@ typing
 requests
 bs4
 lxml
+nltk
+pandas
+cython
+word2vec
