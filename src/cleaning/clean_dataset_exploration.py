@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 from nltk.corpus import stopwords
+import word2vec
 
 import click
 from dotenv import find_dotenv, load_dotenv
@@ -22,7 +23,6 @@ def main(lyrics_file_path: str, most_common_n: int = None, most_common_filepath:
     """
     Clean dataset for exploration purpose :
     - Check the most common words of French rap music (which are not common in French books - source https://github.com/gturret/frenchngrams/blob/master/1gramstop10k.csv)
-    - Transform to vectors thanks to already trained embeddings found here http://fauconnier.github.io/ (in order to visualize)
     """
     lyrics_df = pd.read_csv(lyrics_file_path, sep="|", header=None, names=["artist", "song", "lyrics"])
     words = split_in_words(lyrics_df)
@@ -30,6 +30,14 @@ def main(lyrics_file_path: str, most_common_n: int = None, most_common_filepath:
     frequencies_file = open("data/processed/frequencies.txt", "w")
     for item in most_common_words.items():
         frequencies_file.write(item)
+
+
+def to_pretrained_embeddings(word_list):
+    """
+    Transform to vectors thanks to already trained embeddings found here http://fauconnier.github.io/ (in order to visualize)
+    """
+    model = word2vec.load("data/external/frWac_non_lem_no_postag_no_phrase_200_cbow_cut100.bin")
+    return [model[word] for word in word_list]
 
 
 def most_common_french(file_path: str):
